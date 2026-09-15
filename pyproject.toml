@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quickpr-uploader"
+version = "0.1.0"
+description = "A dependency-free cross-platform GitHub file uploader and browser"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+quickpr = "quickpr.cli:entrypoint"
+
+[tool.setuptools.packages.find]
+include = ["quickpr*"]
