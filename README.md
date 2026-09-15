@@ -1,2 +1,189 @@
 # quickPR
-快速将本地文件一键上传到github仓库的轻量级工具
+
+在终端里选择本地文件，查看 GitHub 仓库目录，确认后一次上传。支持 **macOS 和 Windows，Python 3.9 或更新版本**；运行时无第三方依赖，也不要求本地安装 Git。
+
+## 最快启动
+
+先安装 [Python](https://www.python.org/downloads/)。Windows 安装时勾选 **Add python.exe to PATH**。
+
+在这个项目目录打开终端：
+
+**macOS**
+
+```sh
+python3 -m quickpr
+```
+
+也可以双击 `start-macos.command`。如下载后没有执行权限，在项目目录运行 `chmod +x start-macos.command`。
+
+**Windows（PowerShell / Windows Terminal / CMD）**
+
+```powershell
+py -3 -m quickpr
+```
+
+也可以双击 `start-windows.cmd`。没有 `py` 时使用 `python -m quickpr`。
+
+### 第一次登录
+
+推荐安装可选的 [GitHub CLI](https://cli.github.com/)，然后运行：
+
+```sh
+gh auth login --hostname github.com
+```
+
+按提示在浏览器登录。quickPR 会复用该登录状态；**GitHub CLI 不是必需依赖**。
+
+也支持 `GH_TOKEN` / `GITHUB_TOKEN` 环境变量。在交互终端中，如果找不到登录状态，还可粘贴 Personal Access Token，输入会隐藏，仅在本次进程使用。quickPR 不把令牌保存到文件或日志中。请勿把令牌当作命令参数。
+
+Fine-grained token 需选择目标仓库，并授予 **Contents: Read and write**；修改 `.github/workflows/` 时还可能需要 **Workflows: Read and write**。查询公开仓库可不登录。私有仓库查询需要事先登录或设置环境变量。组织仓库可能还要求组织批准或 SSO 授权。
+
+目标仓库需已存在并且至少有一次提交。新建仓库时勾选 **Add a README file** 即可。
+
+## 交互操作
+
+1. 启动后选择“上传”或“查看仓库文件结构”。
+2. 输入仓库地址，分支留空使用仓库默认分支。
+3. 上传时输入本地根目录，在终端用编号选择文件或文件夹。
+4. 浏览远端目录，输入目标路径。回车上传到当前显示的目录，默认是仓库根目录。
+5. 可输入新分支名，或留空直接更新现有分支。
+6. 查看“新增 / 覆盖 / 不变”以及本地到远端的路径映射，输入 `y` 后上传。
+
+本地选择器：
+
+| 输入 | 操作 |
+| --- | --- |
+| `1,3-5` | 选择或取消对应条目；目录会包含里面的全部文件 |
+| `cd 2` | 进入编号 2 的目录 |
+| `..` | 返回上一级，不超出所选本地根目录 |
+| `n` / `p` | 下一页 / 上一页 |
+| `all` | 选择当前目录的全部内容 |
+| `clear` | 清空选择 |
+| `done` | 完成选择 |
+| `q` | 取消 |
+
+远端目录选择时，输入 `ls docs` 查看 `docs`，输入 `ls .` 返回根目录，`done` 使用当前目录。直接输入 `assets/images` 可选择新目录；目录会随文件提交一起创建。
+
+## 命令行快捷上传
+
+下面以 macOS 的 `python3` 为例；Windows 把 `python3` 换成 `py -3`。所有含空格的本地路径均需加双引号。
+
+### 上传一个文件
+
+```sh
+python3 -m quickpr upload "./logo.png" --repo owner/repo --dest images
+```
+
+结果为 `images/logo.png`。同一路径存在时覆盖，不存在时新增。
+
+### 上传一个目录的内容
+
+```sh
+python3 -m quickpr upload "./project" --repo owner/repo --dest assets
+```
+
+例如 `project/config/app.json` 上传为 `assets/config/app.json`，**不额外套一层 project**。
+
+### 选择多个文件，并明确保留相对路径
+
+```sh
+python3 -m quickpr upload "./project/config/app.json" "./project/images/logo.png" --root "./project" --repo owner/repo
+```
+
+结果为 `config/app.json` 和 `images/logo.png`。多个条目没有传 `--root` 时，以各条目父目录的共同目录为根；涉及不同磁盘时请分批上传。
+
+### 只看预览 / 一条命令确认上传
+
+```sh
+python3 -m quickpr upload "./project" --repo owner/repo --dry-run
+python3 -m quickpr upload "./project" --repo owner/repo --yes -m "更新项目文件"
+```
+
+`--dry-run` 只查询和预览，不发送任何写入请求。`--yes` 明确授权这次新增与覆盖，适合重复执行的固定命令或脚本。
+
+没有传本地路径时，`upload --repo owner/repo` 会打开终端文件选择器。
+
+### 上传到现有分支 / 新分支
+
+```sh
+python3 -m quickpr upload "./project" --repo owner/repo --branch develop
+python3 -m quickpr upload "./project" --repo owner/repo --branch main --new-branch uploads/update
+```
+
+新分支基于 `--branch`（默认是默认分支），只在完整提交准备好后创建。不会覆盖同名已有分支。遇到分支保护时，可自行选择新分支，然后在 GitHub 页面创建 Pull Request；工具不会自动创建 PR。
+
+### 排除文件
+
+```sh
+python3 -m quickpr upload "./project" --repo owner/repo --exclude "*.log" --exclude build
+```
+
+默认排除 `.git`、`node_modules`、`.venv`、`venv`、`__pycache__`、`.DS_Store`，被排除的目录不递归进入。`--exclude` 可重复，按根目录内相对路径或条目名称做区分大小写的 glob 匹配；它不是完整的 Git ignore 语法，第一版**不自动解析 `.gitignore`**。
+
+检测到 `.env`、私钥或部分常见令牌时会停止。确认文件适合共享后，可显式传 `--allow-sensitive`。检测是启发式检查，可能误报，也不能识别所有秘密。
+
+## 查询仓库文件结构
+
+```sh
+python3 -m quickpr tree owner/repo
+python3 -m quickpr tree https://github.com/owner/repo --branch main --path src --depth 3 --limit 500
+```
+
+默认显示两层、最多 300 条；按需要请求子目录，查询固定在输出的那次提交上。支持公开和有权限的私有仓库。
+
+仓库地址支持 `owner/repo`、HTTPS 地址（可带 `.git`）、`git@github.com:owner/repo.git`。SSH 格式只用于识别仓库，实际调用仍使用 GitHub HTTPS API 和上述登录凭据；不使用 SSH 密钥认证。
+
+## 上传规则
+
+- 仅按完整仓库相对路径匹配。不同目录下的同名文件不受影响。
+- 本地内容相同的文件跳过；其余文件合并为一个 Git 提交。
+- 原有远端文件不在本次选择范围内时保留；不删除、不镜像同步。
+- 保留被覆盖文件原来的可执行标记；新增文件在 macOS 继承本地可执行标记，在 Windows 默认为普通文件。
+- 预览时将所选文件内容固定在内存里。确认后的本地编辑不会被偷偷带入这次提交。
+- 提交前两次检查源分支，更新时使用非强制更新。常规并发提交会中止本次更新，需要重新预览。GitHub REST 更新接口不提供严格的“旧 SHA 必须相同”条件更新；请避免在上传期间对源分支做强制回退。
+- 文件对象准备完毕后才更新分支，失败不会使目标分支只出现半批文件；中断可能留下未关联到分支的 Git 对象。
+- 最终更新响应丢失时查询分支核实，不自动重试写入。不确定时显示候选提交链接，先检查远端再重试。
+
+## 第一版边界
+
+- 运行需要 Python 3.9+，暂未打包独立 `.exe` / macOS 应用。
+- 仅支持 GitHub.com；不支持 GitHub Enterprise、自建 Git 平台或空仓库自动初始化。
+- 不支持 Git LFS、子模块上传、符号链接、Windows junction、空目录。文件不能替换远端目录/链接/子模块。
+- 单文件最多 100 MiB，单次所选文件总计最多 200 MiB / 1000 个文件；按顺序上传，不提供断点续传。
+- HTTPS 连接使用系统/Python 默认代理和证书配置。组织权限、GitHub 分支规则和速率限制仍然适用。
+- 不写本地 Git 历史，不缓存仓库地址或凭据。重复上传可保存一条包含 `--repo` 等参数的命令。
+
+## 可选：安装为 quickpr 命令
+
+在项目目录安装到自己的 Python 虚拟环境：
+
+macOS：
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install .
+quickpr
+```
+
+Windows PowerShell：
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install .
+.\.venv\Scripts\quickpr.exe
+```
+
+安装阶段可能需要下载构建工具；直接 `python3 -m quickpr` / `py -3 -m quickpr` 启动不需要这一步。
+
+## 测试与验证
+
+```sh
+python3 -m unittest discover -s tests -v
+```
+
+测试覆盖路径、字节内容、覆盖预览、目录查询、HTTP 错误、并发提交、网络结果核实、终端选择及上传流程。测试使用临时本地文件和隔离的远端替身，不会上传到任何真实 GitHub 仓库。
+
+已提供 macOS / Windows / Linux × Python 3.9 / 3.13 的 GitHub Actions 配置。它在代码推送到 GitHub 后运行；配置存在不代表这些平台已实测通过。本次开发机器是 macOS，验证记录见 [docs/verification.md](docs/verification.md)。
+
+接口依据：[GitHub Git Database 使用指南](https://docs.github.com/en/rest/guides/using-the-rest-api-to-interact-with-your-git-database)、[Git trees](https://docs.github.com/en/rest/git/trees)、[Git references](https://docs.github.com/en/rest/git/refs)。
