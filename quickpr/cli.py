@@ -13,6 +13,8 @@ from . import __version__
 from .errors import QuickPRError
 from .files import DEFAULT_EXCLUDES, collect_files, is_link, normalize_destination, plan_upload
 from .github import GitHub, RemoteTree, parse_repo, validate_branch
+from .picker import include_path, pick_files, selection_marker, toggle_path
+from .terminal import Terminal
 from .upload import check_writable, publish
 
 
@@ -56,6 +58,13 @@ def resolve_token(required=False):
 
 
 def select_local(root):
+    if Terminal.available():
+        return pick_files(root)
+    return select_local_numbered(root)
+
+
+def select_local_numbered(root):
+    """Line-input fallback for redirected input or terminals without a screen."""
     root = Path(os.path.abspath(Path(root).expanduser()))
     if not root.is_dir() or is_link(root):
         raise QuickPRError("请选择普通本地目录。")
@@ -69,7 +78,7 @@ def select_local(root):
         print("\n本地根目录：{}\n当前目录：{}".format(display(root), display(current)))
         print("已选 {} 项 · 第 {}/{} 页".format(len(selected), page + 1, max_page + 1))
         for i, entry in enumerate(entries[page * page_size:(page + 1) * page_size], page * page_size + 1):
-            marker = "x" if entry in selected or any(p in selected for p in entry.parents) else " "
+            marker = selection_marker(selected, entry)
             print("  {:>3}. [{}] {}{}".format(i, marker, display(entry.name), "/" if entry.is_dir() else ""))
         print("输入编号切换选择（如 1,3-5）；cd 编号 进入目录；.. 返回；n/p 翻页")
         print("all 选择当前目录全部内容；clear 清空；done 完成；q 取消")
@@ -81,8 +90,7 @@ def select_local(root):
                 return sorted(selected), root
             print("请先选择文件，或输入 q 取消。")
         elif answer == "all":
-            selected = {p for p in selected if current not in p.parents}
-            selected.add(current)
+            selected = include_path(selected, current)
         elif answer == "clear":
             selected.clear()
         elif answer == "..":
@@ -117,13 +125,7 @@ def select_local(root):
                     indices.update(range(start, end + 1))
                 for index in sorted(indices):
                     chosen = entries[index - 1]
-                    if chosen in selected:
-                        selected.remove(chosen)
-                    elif any(p in selected for p in chosen.parents):
-                        print("该项已被选中的父目录包含。要单独选子项，请先取消父目录或 clear。")
-                    else:
-                        selected = {p for p in selected if chosen not in p.parents}
-                        selected.add(chosen)
+                    selected = toggle_path(selected, chosen)
             except ValueError:
                 print("输入无效，请使用编号、cd 编号、all 或 done。")
 

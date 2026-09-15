@@ -67,7 +67,7 @@ class GitHub:
 
     def request(self, method: str, path: str, data=None):
         url = "https://api.github.com/repos/" + self.repo + path
-        headers = {"Accept": "application/vnd.github+json", "User-Agent": "quickPR/0.1.0",
+        headers = {"Accept": "application/vnd.github+json", "User-Agent": "quickPR/0.2.0",
                    "X-GitHub-Api-Version": "2026-03-10"}
         if self.token:
             headers["Authorization"] = "Bearer " + self.token

@@ -6,6 +6,8 @@ quickpr/cli.py
 quickpr/errors.py
 quickpr/files.py
 quickpr/github.py
+quickpr/picker.py
+quickpr/terminal.py
 quickpr/upload.py
 quickpr_uploader.egg-info/PKG-INFO
 quickpr_uploader.egg-info/SOURCES.txt
@@ -16,4 +18,6 @@ tests/test_cli.py
 tests/test_files.py
 tests/test_git_integration.py
 tests/test_github.py
+tests/test_picker.py
+tests/test_terminal.py
 tests/test_upload.py

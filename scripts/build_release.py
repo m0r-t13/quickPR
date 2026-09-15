@@ -6,7 +6,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 def main():
     root = Path(__file__).resolve().parents[1]
-    destination = root / "dist" / "quickPR-0.1.0.zip"
+    destination = root / "dist" / "quickPR-0.2.0.zip"
     destination.parent.mkdir(exist_ok=True)
     files = [root / name for name in ("README.md", "pyproject.toml", ".gitignore", "start-macos.command", "start-windows.cmd")]
     for folder in ("quickpr", "tests", "docs", ".github", "scripts"):
